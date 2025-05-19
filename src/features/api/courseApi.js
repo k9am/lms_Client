@@ -1,10 +1,10 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 
-const COURSE_API = "http://localhost:8080/api/v1/course";
+const COURSE_API = "https://lms-server-pxix.onrender.com/api/v1/course"
 
 export const courseApi = createApi({
   reducerPath: "courseApi",
-  tagTypes: ["Refetch_Creator_Course", "Refetch_Lecture"],
+  tagTypes: ["Refetch_Creator_Course", "Refetch_Lecture", "Search_Results"],
   baseQuery: fetchBaseQuery({
     baseUrl: COURSE_API,
     credentials: "include",
@@ -18,27 +18,33 @@ export const courseApi = createApi({
       }),
       invalidatesTags: ["Refetch_Creator_Course"],
     }),
-    getSearchCourse:builder.query({
-      query: ({searchQuery, categories, sortByPrice}) => {
-        // Build qiery string
-        let queryString = `/search?query=${encodeURIComponent(searchQuery)}`
+    getSearchCourse: builder.query({
+      query: ({ searchQuery, categories, sortByPrice }) => {
+        // Build query string
+        let queryString = `/search?query=${encodeURIComponent(searchQuery || "")}`
 
-        // append cateogry 
-        if(categories && categories.length > 0) {
-          const categoriesString = categories.map(encodeURIComponent).join(",");
-          queryString += `&categories=${categoriesString}`; 
+        // append categories - send as separate parameters for each category
+        if (categories && categories.length > 0) {
+          // Instead of joining with commas, add each category as a separate parameter
+          categories.forEach((category) => {
+            queryString += `&categories[]=${encodeURIComponent(category)}`
+          })
         }
 
-        // Append sortByPrice is available
-        if(sortByPrice){
-          queryString += `&sortByPrice=${encodeURIComponent(sortByPrice)}`; 
+        // Append sortByPrice if available
+        if (sortByPrice) {
+          queryString += `&sortByPrice=${encodeURIComponent(sortByPrice)}`
         }
+
+        console.log("Query string:", queryString) // Debug log
 
         return {
-          url:queryString,
-          method:"GET", 
+          url: queryString,
+          method: "GET",
         }
-      }
+      },
+      // Add tag to allow invalidation
+      providesTags: ["Search_Results"],
     }),
     getPublishedCourse: builder.query({
       query: () => ({
@@ -82,13 +88,7 @@ export const courseApi = createApi({
       providesTags: ["Refetch_Lecture"],
     }),
     editLecture: builder.mutation({
-      query: ({
-        lectureTitle,
-        videoInfo,
-        isPreviewFree,
-        courseId,
-        lectureId,
-      }) => ({
+      query: ({ lectureTitle, videoInfo, isPreviewFree, courseId, lectureId }) => ({
         url: `/${courseId}/lecture/${lectureId}`,
         method: "POST",
         body: { lectureTitle, videoInfo, isPreviewFree },
@@ -114,7 +114,7 @@ export const courseApi = createApi({
       }),
     }),
   }),
-});
+})
 export const {
   useCreateCourseMutation,
   useGetSearchCourseQuery,
@@ -128,4 +128,4 @@ export const {
   useRemoveLectureMutation,
   useGetLectureByIdQuery,
   usePublishCourseMutation,
-} = courseApi;
+} = courseApi
